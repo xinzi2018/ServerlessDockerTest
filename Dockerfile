@@ -6,4 +6,4 @@ ADD . .
 
 RUN pip install -r requirements.txt
 
-CMD ["python", "./helloworld.py"]
+CMD ["python", "./miaohui1_robot.py"]

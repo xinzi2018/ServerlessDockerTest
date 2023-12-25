@@ -389,6 +389,7 @@ class Draw_tool_dlntest:
         
 
     def hair_trail_dln(self):
+        temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
         vis_parsing_anno_color = self.getParsingBasedCombine(self.hair_combine, element_kernel=5, iterationsNum=9)
 
@@ -399,14 +400,18 @@ class Draw_tool_dlntest:
         img[img == 255] = 1
         img = (img == 1)  # 0-1 转换成false-true
 
+        print('头发预处理时间=',time.time()-temp)
 
-     
+        temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
-
         self.trailSave([final_cont],self.hair_file, saveType=0, flag=0)
+        print('头发轨迹生成时间+保存txt时间=',time.time()-temp)
        
+        temp = time.time()
+        print('======',self.hairoptimflag)
         if self.hairoptimflag:
             self.Optimization(self.hair_save_path)
+            print('头发轨迹优化时间=',time.time()-temp)
         
 
         temp = time.time()
@@ -414,6 +419,7 @@ class Draw_tool_dlntest:
         lines = f2.readlines()
         for line in lines:
             self.trail_file.write(line)
+        print('头发轨迹保存至总文件的时间=',time.time()-temp)
        
 
 
@@ -447,6 +453,7 @@ class Draw_tool_dlntest:
             
  
     def face_trail(self):
+        temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
 
         vis_parsing_anno_color = self.getParsingBasedCombine(self.face_combine, element_kernel=3, iterationsNum=1)
@@ -463,28 +470,27 @@ class Draw_tool_dlntest:
         
         index = np.where(vis_parsing_anno_color==0)
         img0[index[0], index[1]] = 255
+        print('人脸预处理时间==',time.time()-temp)
 
-        # self.final_img = cv2.bitwise_and(self.final_img,img0)
-
-        # cv2.imwrite('face_trail.png',img0)
+        
         
         temp = time.time()
-
- 
         final_cont_list = self.yzy_trailGenerate(img0)
         self.trailSave(final_cont_list, self.face_file, saveType=0,flag=0)
+        print('人脸轨迹生成+存txt的时间==',time.time()-temp)
        
-
-        print('人脸轨迹的时间==',time.time()-temp)
-       
-        
+        temp = time.time()
         if self.faceoptimflag:
             self.Optimization(self.face_save_path)# 路径的优化
+            print('人脸轨迹优化的时间==', time.time()-temp)
 
+
+        temp = time.time()
         f2 = open(self.face_save_path, "r")
-        lines = f2.readlines()# 将优化后的路径合并到总路径中
+        lines = f2.readlines() # 将优化后的路径合并到总路径中
         for line in lines:
             self.trail_file.write(line)
+        print('人脸轨迹保存至总文件的时间=',time.time()-temp)
 
 
 
@@ -538,20 +544,20 @@ class Draw_tool_dlntest:
         element = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
         ##yuzeyuan
         for i in self.eyeballs_combine:
+            temp = time.time()
             img0 = np.zeros(self.img.shape)+255
             img0 = img0.astype(np.uint8)
             self.vis_parsing_anno[:,:,i] = cv2.dilate(self.vis_parsing_anno[:,:,i], element, iterations = 5)
             index = np.where(self.vis_parsing_anno[:,:,i]>0)
             img0[index[0], index[1]] = self.img[index[0], index[1]]
+            print('{}_眼球预处理时间=='.format(i), time.time()-temp)
             
         
             # cv2.imwrite('eyeballs_trail.png', img0)
             temp = time.time()
             eyeballs_cont, eyeballs_draw = self.detailtrail_generation.main_part(img0,8)
-            print('眼球轨迹的处理时间==', time.time()-temp)
-            
-       
             self.trailSave([eyeballs_cont], self.trail_file, saveType=0,flag=1)
+            print('{}_眼球轨迹+存储的处理时间=='.format(i), time.time()-temp)
            
 
 
@@ -559,14 +565,17 @@ class Draw_tool_dlntest:
        
         #yuzeyuan
         for i in self.eyebrow_combine:
+            temp = time.time()
             img0 = np.zeros(self.img.shape)+255
             img0 = img0.astype(np.uint8)
             #index = np.where(self.vis_parsing_anno==i)
             index = np.where(self.vis_parsing_anno[:,:,i]>0)
             img0[index[0], index[1]] = self.img[index[0], index[1]]
             # self.final_img = cv2.bitwise_and(self.final_img,img0)
+            print('{}_眉毛预处理时间=='.format(i), time.time()-temp)
 
 
+            temp = time.time()
             # cv2.imwrite('eyebrow_trail_{}.png'.format(i),img0)
             eyebrow_cont, eyebrow_draw = self.detailtrail_generation.main_part(img0,10)
             if scancodeid in ['1024']:#'8ha8aztvnq',
@@ -585,11 +594,12 @@ class Draw_tool_dlntest:
             else:
                 temp = time.time()
                 self.trailSave([eyebrow_cont], self.trail_file, saveType=0,flag=1)
-                print('眉毛的轨迹时间=',time.time()-temp)
+                print('{}_眉毛轨迹+存储的处理时间=='.format(i), time.time()-temp)
     
     
   
     def nose_mouse_trail(self):
+        temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
         ##yuzeyuan-gujia
    
@@ -600,15 +610,13 @@ class Draw_tool_dlntest:
 
         vis_parsing_anno_color = self.getParsingBasedCombine(self.nose_mouse_combine, element_kernel=3, iterationsNum=7)
         img0 = cv2.bitwise_or(self.img, vis_parsing_anno_color)
-       
+        print('鼻子嘴巴预处理时间==', time.time()-temp)
 
         # cv2.imwrite('nose_mouse_trail.png',img0)
         temp = time.time()
-
         final_cont_list = self.yzy_trailGenerate(img0)
         self.trailSave(final_cont_list,self.trail_file, saveType=0,flag=0)
-
-        print('鼻子嘴巴的轨迹时间==', time.time()-temp)
+        print('鼻子嘴巴的轨迹+保存时间==', time.time()-temp)
 
     def nose_mouse_trail_dln(self):
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
@@ -656,7 +664,7 @@ class Draw_tool_dlntest:
      
 
     def neck_dress_trail_dln(self): #
-
+        temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
         
 
@@ -675,13 +683,14 @@ class Draw_tool_dlntest:
         img[img == 255] = 1
         img = (img == 1)  # 0-1 转换成false-true
 
+        print('脖子衣服预处理时间==', time.time()-temp)
+
         # cv2.imwrite('neck_dress_trail_dln.png', img*255)
          
-      
+        temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
-
-    
         self.trailSave([final_cont], self.trail_file, saveType=0, flag=0)
+        print('脖子衣服的轨迹+保存时间==', time.time()-temp)
       
 
 
@@ -704,7 +713,7 @@ class Draw_tool_dlntest:
        
 
     def others_trail_dln(self):
-
+        temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
        
 
@@ -717,14 +726,15 @@ class Draw_tool_dlntest:
         ret, img = cv2.threshold(img0, 127, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
         img[img == 255] = 1
         img = (img == 1)  # 0-1 转换成false-true
-
+        print('其他预处理时间==', time.time()-temp)
 
         # cv2.imwrite('others_trail_dln.png',img*255)
-       
+        temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
 
         # self.trail_write_other(final_cont)
         self.trailSave([final_cont], self.trail_file, saveType=1)
+        print('其他的轨迹+保存时间==', time.time()-temp)
  
 
     def changepoints(self,scancodeid, filename=None, factor=1):

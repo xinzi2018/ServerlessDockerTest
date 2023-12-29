@@ -16,7 +16,8 @@ import PIL.ImageFont as ImageFont
 from skimage.morphology import skeletonize
 
 
-from sknw import build_sknw 
+# from sknw import build_sknw 
+from .sknw_my import build_sknw 
 from .Optimal_Path import OptimalPath,OptimalPathUtils 
 from .Trail_Generation import maintrail_generation,detailtrail_generation
 from .Z_scan import Z_scan

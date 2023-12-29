@@ -11,7 +11,7 @@ miaohui = MiaoHui1116()
 
 if __name__ == '__main__':
  
-    # miaohui = MiaoHui1116()
+    miaohui = MiaoHui1116()
     
      
     outputPath ,_= miaohui.trail_generate('./testData/Photo1_output.png', './testData/Photo1_parsing.npy', 

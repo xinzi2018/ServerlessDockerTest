@@ -17,7 +17,8 @@ if __name__ == '__main__':
     outputPath ,_= miaohui.trail_generate('./testData/Photo1_output.png', './testData/Photo1_parsing.npy', 
                                             './testData/Photo1_temp.txt', './testData/Photo1_trail_temp.png', "8ha8azthmj", '000')# error 报错
 
-    return outputPath,time.asctime( time.localtime(time.time()) )
+    print(outputPath,time.asctime( time.localtime(time.time()) ))
+    
  
 
 

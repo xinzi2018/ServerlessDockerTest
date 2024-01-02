@@ -49,7 +49,7 @@ def trail_generate():
     outputPath ,_= miaohui.trail_generate(sketch_path, parsing_path, trail_txt_path, trail_png_path, "8ha8azthmj", '000')# error 报错
  
 
-
+    print(outputPath,time.asctime( time.localtime(time.time()) ))
      
     return  outputPath 
  

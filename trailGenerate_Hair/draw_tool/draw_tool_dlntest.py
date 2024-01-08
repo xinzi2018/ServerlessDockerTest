@@ -405,8 +405,10 @@ class Draw_tool_dlntest:
 
         temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
+        print('头发轨迹生成时间',time.time()-temp)
+        temp = time.time()
         self.trailSave([final_cont],self.hair_file, saveType=0, flag=0)
-        print('头发轨迹生成时间+保存txt时间=',time.time()-temp)
+        print('保存txt时间=',time.time()-temp)
        
         
 

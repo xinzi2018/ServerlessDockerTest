@@ -390,6 +390,7 @@ class Draw_tool_dlntest:
         
 
     def hair_trail_dln(self):
+        print('hair_trail_dln子进程: {}'.format(os.getpid()))
         temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
         vis_parsing_anno_color = self.getParsingBasedCombine(self.hair_combine, element_kernel=5, iterationsNum=9)
@@ -401,7 +402,7 @@ class Draw_tool_dlntest:
         img[img == 255] = 1
         img = (img == 1)  # 0-1 转换成false-true
 
-        print('头发预处理时间=',time.time()-temp)
+        # print('头发预处理时间=',time.time()-temp)
 
         temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
@@ -412,7 +413,7 @@ class Draw_tool_dlntest:
         print('======',self.hairoptimflag)
         if self.hairoptimflag:
             self.Optimization(self.hair_save_path)
-            print('头发轨迹优化时间=',time.time()-temp)
+            # print('头发轨迹优化时间=',time.time()-temp)
         
 
         temp = time.time()
@@ -420,7 +421,7 @@ class Draw_tool_dlntest:
         lines = f2.readlines()
         for line in lines:
             self.trail_file.write(line)
-        print('头发轨迹保存至总文件的时间=',time.time()-temp)
+        # print('头发轨迹保存至总文件的时间=',time.time()-temp)
        
 
 
@@ -454,6 +455,7 @@ class Draw_tool_dlntest:
             
  
     def face_trail(self):
+        print('face_trail子进程: {}'.format(os.getpid()))
         temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
 
@@ -471,7 +473,7 @@ class Draw_tool_dlntest:
         
         index = np.where(vis_parsing_anno_color==0)
         img0[index[0], index[1]] = 255
-        print('人脸预处理时间==',time.time()-temp)
+        # print('人脸预处理时间==',time.time()-temp)
 
         
         
@@ -483,7 +485,7 @@ class Draw_tool_dlntest:
         temp = time.time()
         if self.faceoptimflag:
             self.Optimization(self.face_save_path)# 路径的优化
-            print('人脸轨迹优化的时间==', time.time()-temp)
+            # print('人脸轨迹优化的时间==', time.time()-temp)
 
 
         temp = time.time()
@@ -491,7 +493,7 @@ class Draw_tool_dlntest:
         lines = f2.readlines() # 将优化后的路径合并到总路径中
         for line in lines:
             self.trail_file.write(line)
-        print('人脸轨迹保存至总文件的时间=',time.time()-temp)
+        # print('人脸轨迹保存至总文件的时间=',time.time()-temp)
 
 
 
@@ -914,6 +916,10 @@ class Draw_tool_dlntest:
         #     _,self.img = cv2.threshold(self.img, 144, 255, cv2.THRESH_BINARY)
         # _,self.img = cv2.threshold(self.img, 144, 255, cv2.THRESH_BINARY)
         # scancodeids_bin = ["1012","1023","1025","1027"]  # and black 8ha8aztvlx ,"1031","8ha8azthmj"
+
+
+        from multiprocessing import Process
+        
         if (scancodeid in self.scancodeid_shuangren) and (self.vis_parsing_anno.shape[2]==21):#####第21通加进了falg=4
             if [4] in np.unique(self.vis_parsing_anno[-1]):
                 self.factor = self.factor * 1.4
@@ -925,15 +931,48 @@ class Draw_tool_dlntest:
         if self.vis_parsing_anno.shape[2]==21:
             self.img = self.clearCircleSideout(self.img,robot_circle_path)
             # sknw的方法  
-            print('轨迹生成使用的是Sknw的方法')
-            self.hair_trail_dln() 
-            # self.face_trail_dln()  ###旧parsing时使用
-            self.face_trail()  ##SEGnextparsing时使用
-            self.eyeballs_trail() 
-            self.eyebrow_trail(scancodeid) 
-            self.nose_mouse_trail() 
-            self.neck_dress_trail_dln() 
-            self.others_trail_dln() 
+            # print('轨迹生成使用的是Sknw的方法')
+            
+            # self.hair_trail_dln() 
+            # # self.face_trail_dln()  ###旧parsing时使用
+            # self.face_trail()  ##SEGnextparsing时使用
+            
+            # self.eyeballs_trail() 
+            # self.eyebrow_trail(scancodeid) 
+            # self.nose_mouse_trail() 
+            # self.neck_dress_trail_dln() 
+            # self.others_trail_dln() 
+
+
+            print('当前母进程: {}'.format(os.getpid()))
+            p1 = Process(target=self.hair_trail_dln)
+            p2 = Process(target=self.face_trail)
+            # p3 = Process(target=self.eyeballs_trail)
+            # p4 = Process(target=self.eyebrow_trail,args=(scancodeid,))
+            # p5 = Process(target=self.nose_mouse_trail)
+            # p6 = Process(target=self.neck_dress_trail_dln)
+            # p7 = Process(target=self.others_trail_dln)
+
+            print('等待所有子进程完成。')
+            p1.start()
+            p2.start()
+            # p3.start()
+            # p4.start()
+            # p5.start()
+            # p6.start()
+            # p7.start()
+            
+            p1.join()
+            p2.join()
+            # p3.join()
+            # p4.join()
+            # p5.join()
+            # p6.join()
+            # p7.join()
+            
+            
+
+
 
         else:# 无人的情况
             _,self.img = cv2.threshold(cv2.imread(self.stick_img_path,0),144,255,cv2.THRESH_BINARY)

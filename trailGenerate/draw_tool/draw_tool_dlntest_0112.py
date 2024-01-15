@@ -25,6 +25,8 @@ from .calligraphy import Calligraphy
 from .Zipper4b import Zipper4b
 import os
 
+import multiprocessing
+
 class Draw_tool_dlntest:
     def __init__(self, stick_img_path, parsing_path, trail_save_path, max_thresh=150):
         print("stick_img_path", stick_img_path,parsing_path)
@@ -88,11 +90,18 @@ class Draw_tool_dlntest:
         self.eyebrow_save_path = self.trail_save_path.replace(trail_save_name, "eyebrow_test.txt")
         self.noparsing_save_path = self.trail_save_path.replace(trail_save_name, "noparsing_test.txt")
         
-        self.trail_file = open(self.trail_save_path,'w')
-        self.hair_file = open(self.hair_save_path,'w')
-        self.face_file = open(self.face_save_path,'w')
-        self.eyebrow_file = open(self.eyebrow_save_path,'w')
-        self.noparsing_file = open(self.noparsing_save_path,'w')
+        trail_file = open(self.trail_save_path,'w')
+        hair_file = open(self.hair_save_path,'w')
+        face_file = open(self.face_save_path,'w')
+        eyebrow_file = open(self.eyebrow_save_path,'w')
+        noparsing_file = open(self.noparsing_save_path,'w')
+        
+        trail_file.close()
+        hair_file.close()
+        face_file.close()
+        eyebrow_file.close()
+        noparsing_file.close()
+
         
         self.hairoptimflag = True
         self.faceoptimflag = True
@@ -109,6 +118,9 @@ class Draw_tool_dlntest:
         self.scancodeids_zi = ["10211"]#,"1031", "8ha8azthmj"
 
         self.scancodeid_shuangren = ["1024"]#"8ha8aztvnq",
+
+
+        
 
 
     def handleParsingSegnextparsing(self,):
@@ -277,13 +289,15 @@ class Draw_tool_dlntest:
             final_cont_list.append(final_cont)
         return final_cont_list
 
-    def trailSave(self,final_cont_list, save_file, saveType=0, flag=0):
+    def trailSave(self,final_cont_list, save_file_path, saveType=0, flag=0):
+        save_file = open(save_file_path, 'a+')
         for final_cont in final_cont_list:
             if saveType==0:
                 self.trail_write(final_cont, save_file, flag=flag)
             elif saveType ==1:
                 self.trail_write_other(final_cont, save_file)
-        # save_file.close()
+        save_file.close()
+
 
     def hair_trail(self):
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
@@ -295,17 +309,14 @@ class Draw_tool_dlntest:
         # self.final_img = cv2.bitwise_and(self.final_img, img0)
         
         final_cont_list = self.yzy_trailGenerate(img0)
-        self.trailSave(final_cont_list,self.hair_file,saveType=0,flag=0)
+        self.trailSave(final_cont_list,self.hair_save_path,saveType=0,flag=0)
         
  
         if self.hairoptimflag:
             self.Optimization(self.hair_save_path)
-        
-        f2 = open(self.hair_save_path, "r")
-        lines = f2.readlines()
-        for line in lines:
-            self.trail_file.write(line)
-
+        # 不使用进程
+        self.Resave(self.hair_save_path)
+         
     def notes_EndToEnd(self,graph):
 
         nodes_list = []
@@ -390,7 +401,7 @@ class Draw_tool_dlntest:
         
 
     def hair_trail_dln(self):
-        # print('hair_trail_dln子进程: {}'.format(os.getpid()))
+        print('hair_trail_dln子进程: {}'.format(os.getpid()))
         temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
         vis_parsing_anno_color = self.getParsingBasedCombine(self.hair_combine, element_kernel=5, iterationsNum=9)
@@ -406,7 +417,8 @@ class Draw_tool_dlntest:
 
         temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
-        self.trailSave([final_cont],self.hair_file, saveType=0, flag=0)
+        
+        self.trailSave([final_cont], self.hair_save_path, saveType=0, flag=0)
         print('头发轨迹生成时间+保存txt时间=',time.time()-temp)
        
         temp = time.time()
@@ -416,13 +428,30 @@ class Draw_tool_dlntest:
             # print('头发轨迹优化时间=',time.time()-temp)
         
 
+
         temp = time.time()
-        f2 = open(self.hair_save_path, "r")
+        # # 不使用进程
+        self.ReSave(self.hair_save_path)
+         
+        # # print('头发轨迹保存至总文件的时间=',time.time()-temp)
+
+        # # 使用进程
+        # return self.hair_save_path 
+
+
+
+    
+    def ReSave(self, filepath1):
+        print('-----------resave')
+        f2 = open(filepath1, "r")
         lines = f2.readlines()
+
+        trail_file = open(self.trail_save_path,'a+') #追加在原文档末尾，不会清空原内容，
         for line in lines:
-            self.trail_file.write(line)
-        # print('头发轨迹保存至总文件的时间=',time.time()-temp)
-       
+            trail_file.write(line)
+        trail_file.close()
+
+
 
 
     def Sknw_trailGenerate(self, img):# img的数据范围为True/False，可视化出来的图为黑线白底
@@ -443,19 +472,18 @@ class Draw_tool_dlntest:
 
 
         final_cont_list = self.yzy_trailGenerate(img0)
-        self.trailSave(final_cont_list,self.noparsing_file, saveType=0, flag=0)
+        self.trailSave(final_cont_list,self.noparsing_save_path, saveType=0, flag=0)
         
         if self.noparoptimflag:
             self.Optimization(self.noparsing_save_path)
-            
-        f2 = open(self.noparsing_save_path, "r")
-        lines = f2.readlines()
-        for line in lines:
-            self.trail_file.write(line)
+        
+        # 不使用进程
+        self.Resave(self.noparsing_save_path)
+         
             
  
     def face_trail(self):
-        # print('face_trail子进程: {}'.format(os.getpid()))
+        print('face_trail子进程: {}'.format(os.getpid()))
         temp = time.time()
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
 
@@ -479,7 +507,7 @@ class Draw_tool_dlntest:
         
         temp = time.time()
         final_cont_list = self.yzy_trailGenerate(img0)
-        self.trailSave(final_cont_list, self.face_file, saveType=0,flag=0)
+        self.trailSave(final_cont_list, self.face_save_path, saveType=0,flag=0)
         print('人脸轨迹生成+存txt的时间==',time.time()-temp)
        
         temp = time.time()
@@ -489,11 +517,14 @@ class Draw_tool_dlntest:
 
 
         temp = time.time()
-        f2 = open(self.face_save_path, "r")
-        lines = f2.readlines() # 将优化后的路径合并到总路径中
-        for line in lines:
-            self.trail_file.write(line)
-        # print('人脸轨迹保存至总文件的时间=',time.time()-temp)
+        # 不使用进程
+        self.ReSave(self.face_save_path)
+         
+        # # print('人脸轨迹保存至总文件的时间=',time.time()-temp)
+
+        # # 使用进程
+        # return self.face_save_path
+
 
 
 
@@ -529,17 +560,16 @@ class Draw_tool_dlntest:
         final_cont = self.Sknw_trailGenerate(img)
        
        
-        self.trailSave([final_cont], self.face_file, saveType=0,flag=0)
+        self.trailSave([final_cont], self.face_save_path, saveType=0,flag=0)
         
         
         
         if self.faceoptimflag:
             self.Optimization(self.face_save_path)
 
-        f2 = open(self.face_save_path, "r")
-        lines = f2.readlines()
-        for line in lines:
-            self.trail_file.write(line)
+        # 不使用进程
+        self.Resave(self.face_save_path)
+         
             
   
    
@@ -559,7 +589,7 @@ class Draw_tool_dlntest:
             # cv2.imwrite('eyeballs_trail.png', img0)
             temp = time.time()
             eyeballs_cont, eyeballs_draw = self.detailtrail_generation.main_part(img0,8)
-            self.trailSave([eyeballs_cont], self.trail_file, saveType=0,flag=1)
+            self.trailSave([eyeballs_cont], self.trail_save_path, saveType=0,flag=1)
             print('{}_眼球轨迹+存储的处理时间=='.format(i), time.time()-temp)
            
 
@@ -584,21 +614,19 @@ class Draw_tool_dlntest:
             if scancodeid in ['1024']:#'8ha8aztvnq',
                 # self.eyebrow_file = open(self.eyebrow_save_path,'w')
                  
-                self.trailSave([eyebrow_cont], self.eyebrow_file, saveType=0,flag=1)
-                # self.trail_write(eyebrow_cont, self.eyebrow_file, flag=1)
-                # self.eyebrow_file.close()
+                self.trailSave([eyebrow_cont], self.eyebrow_save_path, saveType=0,flag=1)
                 
                 if self.eyebrowoptimflag:
                     self.Optimization(self.eyebrow_save_path)
-                f2 = open(self.eyebrow_save_path, "r")
-                lines = f2.readlines()
-                for line in lines:
-                    self.trail_file.write(line)
+                # 不使用进程
+                self.Resave(self.eyebrow_save_path)
+               
             else:
                 temp = time.time()
-                self.trailSave([eyebrow_cont], self.trail_file, saveType=0,flag=1)
+                self.trailSave([eyebrow_cont], self.trail_save_path, saveType=0,flag=1)
                 print('{}_眉毛轨迹+存储的处理时间=='.format(i), time.time()-temp)
-    
+     
+
     
   
     def nose_mouse_trail(self):
@@ -618,8 +646,9 @@ class Draw_tool_dlntest:
         # cv2.imwrite('nose_mouse_trail.png',img0)
         temp = time.time()
         final_cont_list = self.yzy_trailGenerate(img0)
-        self.trailSave(final_cont_list,self.trail_file, saveType=0,flag=0)
+        self.trailSave(final_cont_list,self.trail_save_path, saveType=0,flag=0)
         print('鼻子嘴巴的轨迹+保存时间==', time.time()-temp)
+
 
     def nose_mouse_trail_dln(self):
         img0 = np.zeros(self.img.shape).astype(np.uint8) + 255
@@ -639,7 +668,7 @@ class Draw_tool_dlntest:
         img = (img == 1)  # 0-1 转换成false-true
 
         final_cont = self.Sknw_trailGenerate(img)
-        self.trailSave([final_cont],self.trail_file, saveType=0, flag=0)
+        self.trailSave([final_cont],self.trail_save_path, saveType=0, flag=0)
  
  
     def neck_dress_trail(self):
@@ -663,7 +692,7 @@ class Draw_tool_dlntest:
          
 
         final_cont_list = self.yzy_trailGenerate(img0)
-        self.trailSave(final_cont_list, self.trail_file, saveType=0, flag=0)
+        self.trailSave(final_cont_list, self.trail_save_path, saveType=0, flag=0)
      
 
     def neck_dress_trail_dln(self): #
@@ -692,7 +721,7 @@ class Draw_tool_dlntest:
          
         temp = time.time()
         final_cont = self.Sknw_trailGenerate(img)
-        self.trailSave([final_cont], self.trail_file, saveType=0, flag=0)
+        self.trailSave([final_cont], self.trail_save_path, saveType=0, flag=0)
         print('脖子衣服的轨迹+保存时间==', time.time()-temp)
       
 
@@ -711,7 +740,7 @@ class Draw_tool_dlntest:
 
 
         final_cont_list = self.yzy_trailGenerate(img0)
-        self.trailSave(final_cont_list, self.trail_file, saveType=1)
+        self.trailSave(final_cont_list, self.trail_save_path, saveType=1)
         
        
 
@@ -736,7 +765,7 @@ class Draw_tool_dlntest:
         final_cont = self.Sknw_trailGenerate(img)
 
         # self.trail_write_other(final_cont)
-        self.trailSave([final_cont], self.trail_file, saveType=1)
+        self.trailSave([final_cont], self.trail_save_path, saveType=1)
         print('其他的轨迹+保存时间==', time.time()-temp)
  
 
@@ -827,6 +856,8 @@ class Draw_tool_dlntest:
         return img
     
     def ziku(self,down_display=200, left_display=200):
+        trail_file = open(self.trail_save_path,'a+')
+
         start_pos = [0, w - down_display]  ##上下的位置 ##w
         words_strokes = []
         for i in range(len(strings)):
@@ -840,13 +871,17 @@ class Draw_tool_dlntest:
 #                        print("fdfs")
                     # cv2.line(self.final_draw, (stroke[:, 0][ff], w- stroke[:, 1][ff]), (stroke[:, 0][ff+1],w - stroke[:, 1][ff+1]), (0,0,0),1)
                     if ff==0:
-                        self.trail_file.write(str(round(self.factor * stroke[:, 0][ff], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
-                        self.trail_file.write(str(round(self.factor *stroke[:, 0][ff], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff]), 2))+' '+'-33'+'\n')
+                        trail_file.write(str(round(self.factor * stroke[:, 0][ff], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
+                        trail_file.write(str(round(self.factor *stroke[:, 0][ff], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff]), 2))+' '+'-33'+'\n')
                     else:
-                        self.trail_file.write(str(round(self.factor *stroke[:, 0][ff], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
-                self.trail_file.write(str(round(self.factor *stroke[:, 0][ff+1], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff+1]), 2))+' '+'0'+'\n')
-                self.trail_file.write(str(round(self.factor *stroke[:, 0][ff+1], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff+1]), 2))+' '+'33'+'\n')
+                        trail_file.write(str(round(self.factor *stroke[:, 0][ff], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
+                trail_file.write(str(round(self.factor *stroke[:, 0][ff+1], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff+1]), 2))+' '+'0'+'\n')
+                trail_file.write(str(round(self.factor *stroke[:, 0][ff+1], 2)) + ' '+str(round(self.factor *(w - stroke[:, 1][ff+1]), 2))+' '+'33'+'\n')
+        trail_file.close()
+
+
     def ziku2(self, strings, down_display=200, left_display=200,factor = 300.0/1600.0,shu_dis=120):
+        trail_file = open(self.trail_save_path,'a+')
         w = 1600
         calligraphy = Calligraphy()
 #        factor = 300.0/1600.0 #40.0/1600.0 #117个字的是60.0-8,40.0-5
@@ -866,15 +901,15 @@ class Draw_tool_dlntest:
                 for ff in range(len(stroke[:,0])-1):
                     # cv2.line(self.final_draw, (int(factor*stroke[:, 0][ff]), int(factor*(w- stroke[:, 1][ff]))), (int(factor* stroke[:, 0][ff+1]),int(factor*(w - stroke[:, 1][ff+1]))), (0,0,0),1)
                     if ff==0:
-                        self.trail_file.write(str(round(factor * stroke[:, 0][ff], 2)) + ' '+str(round(y_pianyiliang+factor * (w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
-                        self.trail_file.write(str(round(factor * stroke[:, 0][ff], 2)) + ' '+str(round(y_pianyiliang+factor * (w - stroke[:, 1][ff]), 2))+' '+'-33'+'\n')
+                        trail_file.write(str(round(factor * stroke[:, 0][ff], 2)) + ' '+str(round(y_pianyiliang+factor * (w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
+                        trail_file.write(str(round(factor * stroke[:, 0][ff], 2)) + ' '+str(round(y_pianyiliang+factor * (w - stroke[:, 1][ff]), 2))+' '+'-33'+'\n')
                     else:
-                        self.trail_file.write(str(round(factor * stroke[:, 0][ff], 2)) + ' '+str(round(y_pianyiliang+factor * (w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
+                        trail_file.write(str(round(factor * stroke[:, 0][ff], 2)) + ' '+str(round(y_pianyiliang+factor * (w - stroke[:, 1][ff]), 2))+' '+'0'+'\n')
                         
-                self.trail_file.write(str(round(factor * stroke[:, 0][ff+1], 2)) + ' '+str(round(y_pianyiliang+factor *(w - stroke[:, 1][ff+1]), 2))+' '+'0'+'\n')
-                self.trail_file.write(str(round(factor * stroke[:, 0][ff+1], 2)) + ' '+str(round(y_pianyiliang+factor *(w - stroke[:, 1][ff+1]), 2))+' '+'33'+'\n')
+                trail_file.write(str(round(factor * stroke[:, 0][ff+1], 2)) + ' '+str(round(y_pianyiliang+factor *(w - stroke[:, 1][ff+1]), 2))+' '+'0'+'\n')
+                trail_file.write(str(round(factor * stroke[:, 0][ff+1], 2)) + ' '+str(round(y_pianyiliang+factor *(w - stroke[:, 1][ff+1]), 2))+' '+'33'+'\n')
 #            print(str(round(factor * stroke[:, 0][ff+1], 2)) + ' '+str(round(y_pianyiliang+factor *(w - stroke[:, 1][ff+1]), 2)))
-    
+        trail_file.close()
 
     def wordsTrail(self,writeName):
         nonRarelyFlag = self.RareWordJudgment(writeName)
@@ -908,7 +943,8 @@ class Draw_tool_dlntest:
                 self.ziku2(strings, down_display=down_display, left_display=30, factor= 50.0/1600.0,shu_dis=120)
                 down_display += 150
 
-
+    def err_call_back(self,err):
+        print(f'出错啦~ error：{str(err)}')
 
     def main(self, trial_img_path, scancodeid, writeName, robot_circle_path = '/home/zhujingjie/projects/sketch_wood_v3/collected_model/pics/robot/robot_circle.png'):
         # print("scancodeid", scancodeid)
@@ -937,13 +973,13 @@ class Draw_tool_dlntest:
             # self.face_trail_dln()  ###旧parsing时使用
             self.face_trail()  ##SEGnextparsing时使用
             
-            self.eyeballs_trail() 
-            self.eyebrow_trail(scancodeid) 
-            self.nose_mouse_trail() 
-            self.neck_dress_trail_dln() 
-            self.others_trail_dln() 
+            # self.eyeballs_trail() 
+            # self.eyebrow_trail(scancodeid) 
+            # self.nose_mouse_trail() 
+            # self.neck_dress_trail_dln() 
+            # self.others_trail_dln() 
 
-
+            # 使用进程的方法，但是该方法无法解决 多进程运行时候的文件读写问题，该部分代码运行时间为2.15s
             # print('当前母进程: {}'.format(os.getpid()))
             # p1 = Process(target=self.hair_trail_dln)
             # p2 = Process(target=self.face_trail)
@@ -969,8 +1005,22 @@ class Draw_tool_dlntest:
             # # p5.join()
             # # p6.join()
             # # p7.join()
+
             
-            
+            # print('multiprocessing',multiprocessing.cpu_count())
+            # self.pool = multiprocessing.Pool(multiprocessing.cpu_count())
+            # self.pool.apply_async(func=self.hair_trail_dln,  callback=self.ReSave)
+            # self.pool.apply_async(func=self.face_trail,  callback=self.ReSave)
+            # self.pool.close()
+            # self.pool.join() 
+
+            # pool = multiprocessing.Pool(16)
+            # pool.apply_async(func=self.hair_trail_dln, callback=self.ReSave, error_callback=self.err_call_back)
+            # pool.apply_async(func=self.face_trail, callback=self.ReSave, error_callback=self.err_call_back)
+            # pool.close()
+            # pool.join()
+
+                    
 
 
 
@@ -997,11 +1047,12 @@ class Draw_tool_dlntest:
             self.noparsing_trail()
             
 
-
-        self.trail_file.write('0'+' '+'0'+' '+'0'+'\n')
-        self.trail_file.close()
-        self.hair_file.close()
-        self.face_file.close()
+        trail_file = open(self.trail_save_path,'a+')
+        trail_file.write('0'+' '+'0'+' '+'0'+'\n')
+        trail_file.close()
+        print('-------------------')
+        # self.hair_file.close()
+        # self.face_file.close()
 
         if scancodeid in self.scancodeids: # 黄机器
             self.changepoints(scancodeid)
